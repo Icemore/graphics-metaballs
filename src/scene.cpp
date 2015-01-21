@@ -26,15 +26,17 @@ static void TW_CALL tw_remove_metaball(void* data) {
 
 
 scene_t::scene_t()
-    : geometry_(4.2f, 100, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
+    : geometry_(4.2f, 30, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
       draw_mode_(draw_mode_t::SOLID) {
     init_controls();
     init_metaballs();
 
-    vs_ = create_shader(GL_VERTEX_SHADER, "shaders//dummy.glslvs");
-    fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//dummy.glslfs");
-    program_ = create_program(vs_, fs_);
+    vs_ = create_shader(GL_VERTEX_SHADER, "shaders//dummy.vp");
+    fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//dummy.fp");
+    gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
+    program_ = create_program(vs_, fs_, gs_);
 
+    geometry_.init_tables(program_);
     init_buffer();
     init_vertex_array();
 }
@@ -99,7 +101,7 @@ void scene_t::init_vertex_array() {
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
     glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
-    GLuint const pos_location = glGetAttribLocation(program_, "in_pos");
+    GLint const pos_location = glGetAttribLocation(program_, "in_pos");
     glVertexAttribPointer(pos_location, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
     glEnableVertexAttribArray(pos_location);
 
@@ -107,6 +109,10 @@ void scene_t::init_vertex_array() {
 };
 
 void scene_t::add_metaball() {
+    if (metaballs_.size() == geometry_.MAX_METABALL_CNT) {
+        return;
+    }
+
     std::uniform_real_distribution<float> distrib(-0.5, 0.5);
     unique_ptr<metaball_t> metaball(new metaball_t());
 
@@ -173,10 +179,13 @@ void scene_t::animate(float time_from_start) {
 void scene_t::draw_frame(float time_from_start) {
     animate(time_from_start);
 
-    vector<vec3> & triangles = geometry_.generate_geometry();
-    glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * triangles.size(), &triangles[0], GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    if (geometry_.update_grid()) {
+        auto& grid = geometry_.grid();
+        glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * grid.size(), &grid[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    geometry_.update_uniforms(program_);
 
     draw_metaballs(time_from_start, draw_mode_ == WIREFRAME, true);
 
@@ -221,8 +230,8 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
 
     glBindVertexArray(vao_);
 
-    // отрисовка
-    glDrawArrays(GL_TRIANGLES, 0, 3 * geometry_.get_geometry().size());
+
+    glDrawArrays(GL_POINTS, 0, geometry_.grid().size());
 
     if (wired) {
         glDisable(GL_POLYGON_OFFSET_LINE);

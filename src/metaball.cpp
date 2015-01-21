@@ -309,26 +309,6 @@ metaball_geometry::metaball_geometry(float isolevel, float resolution,
         metaballs_(metaballs)
 {}
 
-std::vector<vec3> & metaball_geometry::generate_geometry() {
-    geometry_.clear();
-
-    float width = (upper_bound_.x - lower_bound_.x) / resolution_;
-    float half_width =  width / 2;
-    vec3 dv(half_width, half_width, half_width);
-
-    for (float x = lower_bound_.x + half_width; x < upper_bound_.x; x += width) {
-        for (float y = lower_bound_.y + half_width; y < upper_bound_.y; y += width) {
-            for (float z = lower_bound_.z + half_width; z < upper_bound_.z; z += width) {
-                vec3 center(x, y, z);
-                
-                processCube(center - dv, center + dv);
-            }
-        }
-    }
-
-    return geometry_;
-}
-
 void metaball_geometry::make_cube(vec3 bottom_left, vec3 upper_right, vec3 *cube) const {
     vec3 input[2] = { bottom_left, upper_right };
     
@@ -344,77 +324,76 @@ void metaball_geometry::make_cube(vec3 bottom_left, vec3 upper_right, vec3 *cube
     }
 }
 
-float metaball_geometry::calculate_level(unique_ptr<metaball_t> const & metaball, vec3 const & pos) const {
-    vec3 r = pos - metaball->position;
-    float cur = 1 / glm::dot(r, r);
+void metaball_geometry::init_tables(GLuint program) {
+    glUseProgram(program);
 
-    return metaball->potential * cur;
+    // triangle table
+    GLuint triTableTex;
+    glGenTextures(1, &triTableTex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, triTableTex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0, 
+                 GL_ALPHA_INTEGER_EXT, GL_INT, triangle_table);
+
+    GLint triTableLoc = glGetUniformLocation(program, "triTableTex");
+    glUniform1i(triTableLoc, 0);
+
+    // vertex decals to form a cube from center point
+    vec3 decals[8];
+    float width = (upper_bound_.x - lower_bound_.x) / resolution_;
+    float half_width =  width / 2;
+    vec3 dv(half_width, half_width, half_width);
+
+    make_cube(-dv, dv, decals);
+    GLint vertDecalLoc = glGetUniformLocation(program, "vertDecal");
+    glUniform3fv(vertDecalLoc, 8, reinterpret_cast<float*>(decals));
 }
 
-float metaball_geometry::calculate_level(vec3 const & pos) const {
-    float res = 0;
+const int metaball_geometry::MAX_METABALL_CNT = 32;
+void metaball_geometry::update_uniforms(GLuint program) {
+    GLint isoLevel_loc = glGetUniformLocation(program, "isoLevel");
+    glUniform1f(isoLevel_loc, isolevel_);
 
-    for (unique_ptr<metaball_t> const & metaball : metaballs_) {
-        res += calculate_level(metaball, pos);
+    GLint metaballCnt_loc = glGetUniformLocation(program, "metaballCnt");
+    glUniform1i(metaballCnt_loc, metaballs_.size());
+
+    vec4 metaballs_info[MAX_METABALL_CNT];
+    for (size_t i = 0; i < metaballs_.size(); ++i) {
+        metaballs_info[i] = vec4(metaballs_[i]->position, metaballs_[i]->potential);
     }
 
-    return res;
+    GLint metaballs_loc = glGetUniformLocation(program, "metaballs");
+    glUniform4fv(metaballs_loc, metaballs_.size(), reinterpret_cast<float*>(metaballs_info));
 }
 
-vec3 metaball_geometry::interpolate(vec3 first_pos, vec3 second_pos, 
-    float first_level, float second_level) const {
-    
-    if (abs(isolevel_ - first_level) < eps) {
-        return first_pos;
-    }
-    if (abs(isolevel_ - second_level) < eps) {
-        return second_pos;
+bool metaball_geometry::update_grid() {
+    static float lastResolution = -1;
+
+    if (lastResolution == resolution_) {
+        // no need to regenerate grid
+        return false;
     }
 
-    if (abs(first_level - second_level) < eps) {
-        return first_pos;
-    }
+    grid_.clear();
 
-    float mu = (isolevel_ - first_level) / (second_level - first_level);
-    vec3 res = first_pos + mu * (second_pos - first_pos);
-
-    return res;
-}
-
-void metaball_geometry::processCube(vec3 bottom_left, vec3 upper_right) {        
-    vec3 cube[8];
-    float levels[8];
-    make_cube(bottom_left, upper_right, cube);
-    
-    // determine covered vertexes
-    int cube_index = 0;
-    for (int i = 0; i < 8; ++i) {
-        levels[i] = calculate_level(cube[i]);
-
-        if (levels[i] < isolevel_) {
-            cube_index |= (1 << i);
+    float width = (upper_bound_.x - lower_bound_.x) / resolution_;
+    float half_width = width / 2;
+    vec3 dv(half_width, half_width, half_width);
+    for (float x = lower_bound_.x + half_width; x < upper_bound_.x; x += width) {
+        for (float y = lower_bound_.y + half_width; y < upper_bound_.y; y += width) {
+            for (float z = lower_bound_.z + half_width; z < upper_bound_.z; z += width) {
+                vec3 center(x, y, z);
+                grid_.push_back(center);
+            }
         }
     }
-    
-    // if whole cube is inside or outside
-    if (edge_table[cube_index] == 0) {
-        return;
-    }
-    
-    // find intersections with edges
-    vec3 intersects[12];
-    for (int i = 0; i < 12; ++i) {
-        if (edge_table[cube_index] & (1 << i)) {
-            int first_idx = edge_to_vertex[i][0];
-            int second_idx = edge_to_vertex[i][1];
 
-            intersects[i] = interpolate(cube[first_idx], cube[second_idx], 
-                levels[first_idx], levels[second_idx]);
-        }
-    }
-
-    // create triangles
-    for (int i = 0; triangle_table[cube_index][i] != -1; ++i) {
-        geometry_.push_back(intersects[triangle_table[cube_index][i]]);
-    }
+    return true;
 }

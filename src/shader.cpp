@@ -38,10 +38,11 @@ GLuint create_shader( GLenum shader_type, char const * file_name )
    return shader;
 }
 
-GLuint create_program( GLuint vs, GLuint fs )
+GLuint create_program( GLuint vs, GLuint fs, GLuint gs)
 {
    GLuint const program = glCreateProgram();
    glAttachShader(program, vs);
+   glAttachShader(program, gs);
    glAttachShader(program, fs);
    glLinkProgram(program);
 

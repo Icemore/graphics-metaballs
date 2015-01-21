@@ -4,7 +4,7 @@ project(metaballs)
 
 set(cpps src/main.cpp src/shader.cpp src/scene.cpp src/metaball.cpp)
 set(headers src/shader.h src/common.h src/scene.h src/metaball.h)
-set(shaders shaders/dummy.glslfs shaders/dummy.glslvs)
+set(shaders shaders/dummy.fp shaders/dummy.vp shaders/metaball.geom)
 
 IF (WIN32)
    set(EXTERNAL_LIBS ${PROJECT_SOURCE_DIR}/../../ext CACHE STRING "external libraries location")

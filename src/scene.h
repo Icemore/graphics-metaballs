@@ -28,7 +28,7 @@ public:
 private:
     GLuint vx_buf_;
     GLuint vao_;
-    GLuint vs_, fs_, program_;
+    GLuint vs_, gs_, fs_, program_;
     quat   rotation_by_control_;
     
     metaball_geometry geometry_;

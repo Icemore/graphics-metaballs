@@ -22,10 +22,13 @@ public:
         vec3 lower_bound, vec3 upper_bound, 
         std::vector<unique_ptr<metaball_t>> const &  metaballs);
 
-    std::vector<vec3> & generate_geometry();
+    void init_tables(GLuint program);
+    void update_uniforms(GLuint program);
 
-    std::vector<vec3>& get_geometry() {
-        return geometry_;
+    bool update_grid();
+
+    std::vector<vec3> & grid() {
+        return grid_;
     }
 
     float& isolevel() {
@@ -44,20 +47,14 @@ public:
         return lower_bound_;
     }
 
-    float calculate_level(unique_ptr<metaball_t> const & metaball, vec3 const & pos) const;
-
+    static const int MAX_METABALL_CNT;
 private:
     void make_cube(vec3 bottom_left, vec3 upper_right, vec3 *cube) const;
-    float calculate_level(vec3 const & pos) const;
-    vec3 interpolate(vec3 first_pos, vec3 second_pos, 
-        float first_level, float second_level) const;
-
-    void processCube(vec3 bottom_left, vec3 upper_right);        
 
     float isolevel_;
     float resolution_;
     std::vector<unique_ptr<metaball_t>> const  & metaballs_;
-    std::vector<vec3> geometry_;
+    std::vector<vec3> grid_;
 
     const double eps = 0.00001;
     vec3 lower_bound_, upper_bound_;

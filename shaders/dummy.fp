@@ -1,10 +1,5 @@
 #version 330
 
-in vs_output
-{
-   vec4 pos;
-} f_in;
-
 uniform bool is_wireframe;
 
 out vec3 o_color;
