@@ -344,16 +344,6 @@ void metaball_geometry::init_tables(GLuint program) {
 
     GLint triTableLoc = glGetUniformLocation(program, "triTableTex");
     glUniform1i(triTableLoc, 0);
-
-    // vertex decals to form a cube from center point
-    vec3 decals[8];
-    float width = (upper_bound_.x - lower_bound_.x) / resolution_;
-    float half_width =  width / 2;
-    vec3 dv(half_width, half_width, half_width);
-
-    make_cube(-dv, dv, decals);
-    GLint vertDecalLoc = glGetUniformLocation(program, "vertDecal");
-    glUniform3fv(vertDecalLoc, 8, reinterpret_cast<float*>(decals));
 }
 
 const int metaball_geometry::MAX_METABALL_CNT = 32;
@@ -371,6 +361,16 @@ void metaball_geometry::update_uniforms(GLuint program) {
 
     GLint metaballs_loc = glGetUniformLocation(program, "metaballs");
     glUniform4fv(metaballs_loc, metaballs_.size(), reinterpret_cast<float*>(metaballs_info));
+
+    // vertex decals to form a cube from center point
+    vec3 decals[8];
+    float width = (upper_bound_.x - lower_bound_.x) / resolution_;
+    float half_width =  width / 2;
+    vec3 dv(half_width, half_width, half_width);
+
+    make_cube(-dv, dv, decals);
+    GLint vertDecalLoc = glGetUniformLocation(program, "vertDecal");
+    glUniform3fv(vertDecalLoc, 8, reinterpret_cast<float*>(decals));
 }
 
 bool metaball_geometry::update_grid() {
