@@ -214,6 +214,9 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     GLuint const mvp_location = glGetUniformLocation(program_, "mvp");
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &mvp[0][0]);
 
+    GLuint const model_loc = glGetUniformLocation(program_, "model");
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model[0][0]);
+
     GLuint const is_wireframe_location = glGetUniformLocation(program_, "is_wireframe");
     glUniform1ui(is_wireframe_location, wired);
 

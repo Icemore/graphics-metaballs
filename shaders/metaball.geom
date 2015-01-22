@@ -1,7 +1,11 @@
 #version 330
 
+#define DELTA 0.0001
+
 layout(points) in;
 layout(triangle_strip, max_vertices = 16) out;
+
+out vec4 norm;
 
 uniform isampler2D triTableTex;
 uniform vec4 metaballs[32];
@@ -10,6 +14,7 @@ uniform int metaballCnt;
 uniform float isoLevel;
 uniform vec3 vertDecal[8];
 uniform mat4 mvp;
+uniform mat4 model;
 
 uniform ivec2 edgeToVertex[12] = {
     { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 }, { 0, 4 }, {1, 5},
@@ -53,6 +58,22 @@ void makeCube() {
     }
 }
 
+vec3 getNormal(vec3 pos) {
+	vec3 res;
+
+	for (int i = 0; i < 3; ++i) {
+		vec3 dv = vec3(0, 0, 0);
+		dv[i] = DELTA;
+
+		float first = calculateLevel(pos + dv);
+		float second = calculateLevel(pos - dv);
+
+		res[i] = first - second;
+	}
+
+	res = normalize(-res);
+	return res;
+}
 
 void main() {
     makeCube();
@@ -84,6 +105,7 @@ void main() {
     for (int i = 0; triTableAt(cubeIndex, i) != -1; i+=3) {
         for (int j = 0; j < 3; ++j) {
             vec3 pos = intersects[triTableAt(cubeIndex, i + j)];
+			norm = model * vec4(getNormal(pos), 1);
             gl_Position = mvp * vec4(pos, 1);
             EmitVertex();
         }

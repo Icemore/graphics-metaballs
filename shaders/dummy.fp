@@ -2,6 +2,7 @@
 
 uniform bool is_wireframe;
 
+in vec4 norm;
 out vec3 o_color;
 
 void main()
@@ -10,8 +11,8 @@ void main()
         o_color = vec3(1, 0, 0);
     }
     else {
-        float col = 1;
-        o_color = vec3(col, col, 0);
+        float col = norm.y;
+        o_color = vec3(col, col, col);
     }
 }
 
