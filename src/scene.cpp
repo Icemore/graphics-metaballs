@@ -32,11 +32,19 @@ scene_t::scene_t()
           metaball_amplitude_(0.5f) {
     metaball_freq_ = { 4, 5, 6 };
 
+    lighting_.pos = vec3(5, 0, 0);
+    lighting_.ambient = 0.3f;
+    lighting_.diffuse = 0.8f;
+    lighting_.specular = 0.2f;
+    lighting_.shininess = 50;
+    ambient_color_ = vec3(0, 1, 0);
+    diffuse_color_ = vec3(0, 0.5, 0);
+
     init_controls();
     init_metaballs();
 
     vs_ = create_shader(GL_VERTEX_SHADER, "shaders//dummy.vp");
-    fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//dummy.fp");
+    fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//metaball.fp");
     gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
     program_ = create_program(vs_, fs_, gs_);
 
@@ -75,6 +83,12 @@ void scene_t::init_controls() {
 
     TwAddVarRW(bar_, "speed", TW_TYPE_FLOAT, &metaball_speed_, " label='speed' min=0 max=10 step=0.01 ");
     TwAddVarRW(bar_, "amp", TW_TYPE_FLOAT, &metaball_amplitude_, " label='amplitude' min=0 max=1.5 step=0.01 ");
+
+    TwAddVarRW(bar_, "light_dir", TW_TYPE_DIR3F, &lighting_.pos, " group='light' label='direction' ");
+    TwAddVarRW(bar_, "light_ambient", TW_TYPE_FLOAT, &lighting_.ambient, " group='light' label='ambient' min=0 max=1 step=0.01");
+    TwAddVarRW(bar_, "light_diffuse", TW_TYPE_FLOAT, &lighting_.diffuse, " group='light' label='diffuse' min=0 max=1 step=0.01");
+    TwAddVarRW(bar_, "light_specular", TW_TYPE_FLOAT, &lighting_.specular, " group='light' label='specular' min=0 max=1 step=0.01");
+    TwAddVarRW(bar_, "light_shininess", TW_TYPE_FLOAT, &lighting_.shininess, " group='light' label='shininess' min = 0 max=1000");
 
     TwAddVarRW(bar_, "ObjRotation", TW_TYPE_QUAT4F, &rotation_by_control_,
         " label='Object orientation' opened=true help='Change the object orientation.' ");
@@ -175,6 +189,7 @@ void scene_t::draw_frame(float time_from_start) {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
     geometry_.update_uniforms(program_);
+    set_lights();
 
     draw_metaballs(time_from_start, draw_mode_ == WIREFRAME, true);
 
@@ -183,15 +198,36 @@ void scene_t::draw_frame(float time_from_start) {
     }
 }
 
+void scene_t::set_lights() {
+    GLuint light_pos_loc = glGetUniformLocation(program_, "light.pos");
+    GLuint light_ambient_loc = glGetUniformLocation(program_, "light.ambient");
+    GLuint light_diffuse_loc = glGetUniformLocation(program_, "light.diffuse");
+    GLuint light_specular_loc = glGetUniformLocation(program_, "light.specular");
+    GLuint light_shininess_loc = glGetUniformLocation(program_, "light.shininess");
+    GLuint light_ambient_color_loc = glGetUniformLocation(program_, "light.ambient_color");
+    GLuint light_diffuse_color_loc = glGetUniformLocation(program_, "light.diffuse_color");
+
+    vec3 light_pos = -lighting_.pos;
+    glUniform3fv(light_pos_loc, 1, &light_pos[0]);
+    glUniform1f(light_ambient_loc, lighting_.ambient);
+    glUniform1f(light_diffuse_loc, lighting_.diffuse);
+    glUniform1f(light_specular_loc, lighting_.specular);
+    glUniform1f(light_shininess_loc, lighting_.shininess);
+
+    glUniform3fv(light_ambient_color_loc, 1, &ambient_color_[0]);
+    glUniform3fv(light_diffuse_color_loc, 1, &diffuse_color_[0]);
+}
+
 void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     float const w = (float)glutGet(GLUT_WINDOW_WIDTH);
     float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
 
-    mat4  const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
-    mat4  const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, 1, 0));
+    mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
     mat4 const rotation = mat4_cast(rotation_by_control_);
-    mat4  const model = rotation;
-    mat4  const mvp = proj * view * model;
+    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, 1, 0));
+    mat4 const model = rotation;
+    mat4 const mv = view * model;
+    mat4 const mvp = proj * view * model;
 
     if (wired) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -216,6 +252,9 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
 
     GLuint const model_loc = glGetUniformLocation(program_, "model");
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model[0][0]);
+
+    GLuint const mv_loc = glGetUniformLocation(program_, "mv");
+    glUniformMatrix4fv(mv_loc, 1, GL_FALSE, &mv[0][0]);
 
     GLuint const is_wireframe_location = glGetUniformLocation(program_, "is_wireframe");
     glUniform1ui(is_wireframe_location, wired);

@@ -7,6 +7,14 @@ enum draw_mode_t {
     SOLID, WIREFRAME, WIREFRAME_OVER_SOLID
 };
 
+struct lighting_t {
+    vec3 pos;
+    float ambient;
+    float diffuse;
+    float specular;
+    float shininess;
+};
+
 class scene_t
 {
 public:
@@ -25,6 +33,7 @@ public:
     void draw_frame(float time_from_start);
     void draw_metaballs(float time_from_start, bool wired, bool clear);
 
+    void set_lights();
 private:
     GLuint vx_buf_;
     GLuint vao_;
@@ -39,6 +48,10 @@ private:
     float metaball_speed_;
     float metaball_amplitude_;
     std::vector<float> metaball_freq_;
+
+    lighting_t lighting_;
+    vec3 ambient_color_;
+    vec3 diffuse_color_;
 
     std::default_random_engine generator_;
     TwBar* bar_;

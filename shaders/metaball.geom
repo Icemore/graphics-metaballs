@@ -5,7 +5,8 @@
 layout(points) in;
 layout(triangle_strip, max_vertices = 16) out;
 
-out vec4 norm;
+out vec3 norm;
+out vec3 position;
 
 uniform isampler2D triTableTex;
 uniform vec4 metaballs[32];
@@ -15,6 +16,7 @@ uniform float isoLevel;
 uniform vec3 vertDecal[8];
 uniform mat4 mvp;
 uniform mat4 model;
+uniform mat4 mv;
 
 uniform ivec2 edgeToVertex[12] = {
     { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 }, { 0, 4 }, {1, 5},
@@ -105,8 +107,12 @@ void main() {
     for (int i = 0; triTableAt(cubeIndex, i) != -1; i+=3) {
         for (int j = 0; j < 3; ++j) {
             vec3 pos = intersects[triTableAt(cubeIndex, i + j)];
-			norm = model * vec4(getNormal(pos), 1);
-            gl_Position = mvp * vec4(pos, 1);
+
+			vec4 norm4 = model * vec4(getNormal(pos), 1);
+			norm = norm4.xyz / norm4.w;
+			vec4 position4 = mv * vec4(pos, 1);
+			position = position4.xyz / position4.w;
+			gl_Position = mvp * vec4(pos, 1);
             EmitVertex();
         }
 
