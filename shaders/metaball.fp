@@ -28,12 +28,10 @@ vec3 getBlinnPhong() {
 
 	float diffuseCoef = light.diffuse * max(dot(lightDir, n), 0);
 	vec3 diffuseColor = diffuseCoef * light.diffuse_color;
-	diffuseColor = clamp(diffuseColor, 0, 1);
 	
 	vec3 halfDir = normalize(lightDir + viewDir);
 	float specularAngle = max(dot(halfDir, n), 0);
 	vec3 specularColor = vec3(light.specular * pow(specularAngle, light.shininess));
-	specularColor = clamp(specularColor, 0, 1);
 
 	return ambientColor + diffuseColor + specularColor;
 }
