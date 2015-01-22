@@ -26,8 +26,12 @@ static void TW_CALL tw_remove_metaball(void* data) {
 
 
 scene_t::scene_t()
-    : geometry_(4.2f, 30, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
-      draw_mode_(draw_mode_t::SOLID) {
+        : geometry_(4.2f, 30, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
+          draw_mode_(draw_mode_t::SOLID),
+          metaball_speed_(0.1f),
+          metaball_amplitude_(0.5f) {
+    metaball_freq_ = { 4, 5, 6 };
+
     init_controls();
     init_metaballs();
 
@@ -68,6 +72,9 @@ void scene_t::init_controls() {
 
     TwAddVarRW(bar_, "isolevel", TW_TYPE_FLOAT, &geometry_.isolevel(), " label='isolevel' min=0 max=10 step=0.01 ");
     TwAddVarRW(bar_, "resolution", TW_TYPE_FLOAT, &geometry_.resolution(), " label='resolution' min=10 max=1000");
+
+    TwAddVarRW(bar_, "speed", TW_TYPE_FLOAT, &metaball_speed_, " label='speed' min=0 max=10 step=0.01 ");
+    TwAddVarRW(bar_, "amp", TW_TYPE_FLOAT, &metaball_amplitude_, " label='amplitude' min=0 max=1.5 step=0.01 ");
 
     TwAddVarRW(bar_, "ObjRotation", TW_TYPE_QUAT4F, &rotation_by_control_,
         " label='Object orientation' opened=true help='Change the object orientation.' ");
@@ -113,15 +120,11 @@ void scene_t::add_metaball() {
         return;
     }
 
-    std::uniform_real_distribution<float> distrib(-0.5, 0.5);
+    std::uniform_real_distribution<float> distrib(0, 6);
     unique_ptr<metaball_t> metaball(new metaball_t());
 
     int id = metaballs_.size() == 0 ? 0 : metaballs_.back()->id + 1;
-    for (int k = 0; k < 3; ++k) {
-        metaball->position[k] = distrib(generator_);
-        metaball->direction[k] = distrib(generator_);
-    }
-    metaball->direction = glm::normalize(metaball->direction);
+    metaball->time_shift = distrib(generator_);
     metaball->potential = 0.5;
     metaball->id = id;
 
@@ -153,25 +156,11 @@ void scene_t::remove_metaball(int metaball_id) {
     }
 }
 
-
 void scene_t::animate(float time_from_start) {
-    static float last_time = -1;
-
-    float time_passed = 0;
-    if (last_time > 0) {
-        time_passed = time_from_start - last_time;
-    }
-    last_time = time_from_start;
-
     for (unique_ptr<metaball_t> & metaball : metaballs_) {
-        metaball->position += time_passed * metaball_speed_ * metaball->direction;
-
         for (int i = 0; i < 3; ++i) {
-            if (metaball->position[i] < move_space_coef * geometry_.lower_bound()[i] ||
-                metaball->position[i] > move_space_coef * geometry_.upper_bound()[i]) {
-
-                metaball->direction[i] *= -1;
-            }
+            metaball->position[i] = metaball_amplitude_ *
+                sin(metaball_freq_[i] * metaball_speed_ * time_from_start + metaball->time_shift);
         }
     }
 }

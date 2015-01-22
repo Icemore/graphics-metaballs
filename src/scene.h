@@ -36,8 +36,10 @@ private:
 
     draw_mode_t draw_mode_;
 
-    const float metaball_speed_ = 0.1f;
-    const float move_space_coef = 0.5f;
+    float metaball_speed_;
+    float metaball_amplitude_;
+    std::vector<float> metaball_freq_;
+
     std::default_random_engine generator_;
     TwBar* bar_;
     const string potential_prefix = "potential #";
