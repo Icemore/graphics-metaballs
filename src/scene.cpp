@@ -105,11 +105,13 @@ scene_t::scene_t()
 }
 
 scene_t::~scene_t() {
-    // Удаление ресурсов OpenGL
     glDeleteVertexArrays(1, &metaball_vao_);
+    glDeleteVertexArrays(1, &cube_vao_);
     glDeleteBuffers(1, &metaball_vx_buf_);
+    glDeleteBuffers(1, &cube_vx_buf_);
 
-    for (GLuint shader : {metaball_vs_, metaball_fs_}) {
+    for (GLuint shader : {metaball_vs_, metaball_fs_, metaball_gs_,
+                          cube_vs_, cube_fs_}) {
         glDeleteShader(shader);
     }
 
@@ -124,7 +126,7 @@ void scene_t::init_controls() {
     TwInit(TW_OPENGL, NULL);
 #endif
     bar_ = TwNewBar("Parameters");
-    TwDefine(" Parameters size='300 300' color='70 100 120' valueswidth=150 iconpos=topleft");
+    TwDefine(" Parameters size='300 300' color='70 100 120' alpha=200 valueswidth=150 iconpos=topleft");
 
     TwAddButton(bar_, "Fullscreen toggle", tw_toggle_fullscreen, NULL,
         " label='Toggle fullscreen mode' key=f");
