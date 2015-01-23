@@ -3,17 +3,19 @@
 
 struct metaball_t {
     metaball_t()
-        : id(0), position(0, 0, 0), time_shift(0), potential(1)
+        : id(0), position(0, 0, 0), potential(1)
     {}
 
-    metaball_t(int id, vec3 position, float time_shift, float potential)
-        : id(id), position(position), time_shift(time_shift), potential(potential)
+    metaball_t(int id, vec3 position, float potential)
+        : id(id), position(position), potential(potential)
     {}
 
     int id;
     vec3 position;
-    float time_shift;
     float potential;
+
+    vec3 shift;
+    vec3 freq;
 };
 
 class metaball_geometry {

@@ -198,10 +198,13 @@ void scene_t::add_metaball() {
     }
 
     std::uniform_real_distribution<float> distrib(0, 6);
+    std::uniform_int_distribution<int> uniform_int(1, 10);
     unique_ptr<metaball_t> metaball(new metaball_t());
 
     int id = metaballs_.size() == 0 ? 0 : metaballs_.back()->id + 1;
-    metaball->time_shift = distrib(generator_);
+    metaball->shift = vec3(distrib(generator_), distrib(generator_), distrib(generator_));
+    metaball->freq = vec3(uniform_int(generator_), uniform_int(generator_), uniform_int(generator_));
+
     metaball->potential = 0.5;
     metaball->id = id;
 
@@ -235,10 +238,8 @@ void scene_t::remove_metaball(int metaball_id) {
 
 void scene_t::animate(float time_from_start) {
     for (unique_ptr<metaball_t> & metaball : metaballs_) {
-        for (int i = 0; i < 3; ++i) {
-            metaball->position[i] = metaball_amplitude_ *
-                sin(metaball_freq_[i] * metaball_speed_ * time_from_start + metaball->time_shift);
-        }
+        metaball->position = metaball_amplitude_ *
+            glm::sin(metaball->freq * metaball_speed_ * time_from_start + metaball->shift);
     }
 }
 
