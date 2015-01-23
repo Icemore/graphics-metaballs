@@ -89,16 +89,16 @@ scene_t::scene_t()
     init_controls();
     init_metaballs();
 
-    vs_ = create_shader(GL_VERTEX_SHADER, "shaders//metaball.vp");
-    fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//metaball.fp");
-    gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
-    program_ = create_program(vs_, fs_, gs_);
+    metaball_vs_ = create_shader(GL_VERTEX_SHADER, "shaders//metaball.vp");
+    metaball_fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//metaball.fp");
+    metaball_gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
+    metaball_program_ = create_program(metaball_vs_, metaball_fs_, metaball_gs_);
 
     cube_vs_ = create_shader(GL_VERTEX_SHADER, "shaders//cubemap.vp");
     cube_fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//cubemap.fp");
     cube_program_ = create_program(cube_vs_, cube_fs_);
 
-    geometry_.init_tables(program_);
+    geometry_.init_tables(metaball_program_);
     load_cubemap_texture();
     init_buffer();
     init_vertex_array();
@@ -106,10 +106,10 @@ scene_t::scene_t()
 
 scene_t::~scene_t() {
     // Удаление ресурсов OpenGL
-    glDeleteVertexArrays(1, &vao_);
-    glDeleteBuffers(1, &vx_buf_);
+    glDeleteVertexArrays(1, &metaball_vao_);
+    glDeleteBuffers(1, &metaball_vx_buf_);
 
-    for (GLuint shader : {vs_, fs_}) {
+    for (GLuint shader : {metaball_vs_, metaball_fs_}) {
         glDeleteShader(shader);
     }
 
@@ -165,7 +165,7 @@ void scene_t::init_metaballs() {
     }
 }
 void scene_t::init_buffer() {
-    glGenBuffers(1, &vx_buf_);
+    glGenBuffers(1, &metaball_vx_buf_);
 
     glGenBuffers(1, &cube_vx_buf_);
     glBindBuffer(GL_ARRAY_BUFFER, cube_vx_buf_);
@@ -174,10 +174,10 @@ void scene_t::init_buffer() {
 }
 
 void scene_t::init_vertex_array() {
-    glGenVertexArrays(1, &vao_);
-    glBindVertexArray(vao_);
-    glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
-    GLint const pos_location = glGetAttribLocation(program_, "in_pos");
+    glGenVertexArrays(1, &metaball_vao_);
+    glBindVertexArray(metaball_vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, metaball_vx_buf_);
+    GLint const pos_location = glGetAttribLocation(metaball_program_, "in_pos");
     glVertexAttribPointer(pos_location, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
     glEnableVertexAttribArray(pos_location);
 
@@ -247,11 +247,11 @@ void scene_t::draw_frame(float time_from_start) {
 
     if (geometry_.update_grid()) {
         auto& grid = geometry_.grid();
-        glBindBuffer(GL_ARRAY_BUFFER, vx_buf_);
+        glBindBuffer(GL_ARRAY_BUFFER, metaball_vx_buf_);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * grid.size(), &grid[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
-    geometry_.update_uniforms(program_);
+    geometry_.update_uniforms(metaball_program_);
     set_lights();
 
     draw_cubemap();
@@ -264,15 +264,15 @@ void scene_t::draw_frame(float time_from_start) {
 }
 
 void scene_t::set_lights() {
-    glUseProgram(program_);
+    glUseProgram(metaball_program_);
 
-    GLuint light_pos_loc = glGetUniformLocation(program_, "light.pos");
-    GLuint light_ambient_loc = glGetUniformLocation(program_, "light.ambient");
-    GLuint light_diffuse_loc = glGetUniformLocation(program_, "light.diffuse");
-    GLuint light_specular_loc = glGetUniformLocation(program_, "light.specular");
-    GLuint light_shininess_loc = glGetUniformLocation(program_, "light.shininess");
-    GLuint light_ambient_color_loc = glGetUniformLocation(program_, "light.ambient_color");
-    GLuint light_diffuse_color_loc = glGetUniformLocation(program_, "light.diffuse_color");
+    GLuint light_pos_loc = glGetUniformLocation(metaball_program_, "light.pos");
+    GLuint light_ambient_loc = glGetUniformLocation(metaball_program_, "light.ambient");
+    GLuint light_diffuse_loc = glGetUniformLocation(metaball_program_, "light.diffuse");
+    GLuint light_specular_loc = glGetUniformLocation(metaball_program_, "light.specular");
+    GLuint light_shininess_loc = glGetUniformLocation(metaball_program_, "light.shininess");
+    GLuint light_ambient_color_loc = glGetUniformLocation(metaball_program_, "light.ambient_color");
+    GLuint light_diffuse_color_loc = glGetUniformLocation(metaball_program_, "light.diffuse_color");
 
     vec3 light_pos = -lighting_.pos;
     glUniform3fv(light_pos_loc, 1, &light_pos[0]);
@@ -312,21 +312,21 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     }
 
 
-    glUseProgram(program_);
+    glUseProgram(metaball_program_);
 
-    GLuint const mvp_location = glGetUniformLocation(program_, "mvp");
+    GLuint const mvp_location = glGetUniformLocation(metaball_program_, "mvp");
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &mvp[0][0]);
 
-    GLuint const model_loc = glGetUniformLocation(program_, "model");
+    GLuint const model_loc = glGetUniformLocation(metaball_program_, "model");
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model[0][0]);
 
-    GLuint const mv_loc = glGetUniformLocation(program_, "mv");
+    GLuint const mv_loc = glGetUniformLocation(metaball_program_, "mv");
     glUniformMatrix4fv(mv_loc, 1, GL_FALSE, &mv[0][0]);
 
-    GLuint const is_wireframe_location = glGetUniformLocation(program_, "is_wireframe");
+    GLuint const is_wireframe_location = glGetUniformLocation(metaball_program_, "is_wireframe");
     glUniform1ui(is_wireframe_location, wired);
 
-    glBindVertexArray(vao_);
+    glBindVertexArray(metaball_vao_);
 
 
     glDrawArrays(GL_POINTS, 0, geometry_.grid().size());

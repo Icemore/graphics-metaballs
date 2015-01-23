@@ -39,9 +39,8 @@ public:
     bool load_cube_side(GLenum side_target, std::string const & file_name);
     void draw_cubemap();
 private:
-    GLuint vx_buf_;
-    GLuint vao_;
-    GLuint vs_, gs_, fs_, program_;
+    GLuint metaball_vx_buf_, metaball_vao_;
+    GLuint metaball_vs_, metaball_gs_, metaball_fs_, metaball_program_;
     GLuint cube_vs_, cube_fs_, cube_program_;
     GLuint cube_vx_buf_, cube_vao_, tex_cube_;
     quat   rotation_by_control_;
