@@ -34,10 +34,16 @@ public:
     void draw_metaballs(float time_from_start, bool wired, bool clear);
 
     void set_lights();
+
+    void load_cubemap_texture();
+    bool load_cube_side(GLenum side_target, std::string const & file_name);
+    void draw_cubemap();
 private:
     GLuint vx_buf_;
     GLuint vao_;
     GLuint vs_, gs_, fs_, program_;
+    GLuint cube_vs_, cube_fs_, cube_program_;
+    GLuint cube_vx_buf_, cube_vao_, tex_cube_;
     quat   rotation_by_control_;
     
     metaball_geometry geometry_;
@@ -57,5 +63,6 @@ private:
     TwBar* bar_;
     const string potential_prefix = "potential #";
     const string remove_prefix = "remove #";
+    const string cube_tex_path = "content/Park2/";
 };
 

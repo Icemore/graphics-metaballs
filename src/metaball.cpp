@@ -348,6 +348,8 @@ void metaball_geometry::init_tables(GLuint program) {
 
 const int metaball_geometry::MAX_METABALL_CNT = 32;
 void metaball_geometry::update_uniforms(GLuint program) {
+    glUseProgram(program);
+
     GLint isoLevel_loc = glGetUniformLocation(program, "isoLevel");
     glUniform1f(isoLevel_loc, isolevel_);
 

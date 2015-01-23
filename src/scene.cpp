@@ -6,6 +6,8 @@
 #include <random>
 #include <functional>
 
+#include "FreeImage.h"
+
 static void TW_CALL tw_toggle_fullscreen(void *) {
     glutFullScreenToggle();
 }
@@ -23,6 +25,50 @@ static void TW_CALL tw_remove_metaball(void* data) {
 
     delete input;
 }
+
+static const float cube_points[] = {
+    -10.0f, 10.0f, -10.0f,
+    -10.0f, -10.0f, -10.0f,
+    10.0f, -10.0f, -10.0f,
+    10.0f, -10.0f, -10.0f,
+    10.0f, 10.0f, -10.0f,
+    -10.0f, 10.0f, -10.0f,
+
+    -10.0f, -10.0f, 10.0f,
+    -10.0f, -10.0f, -10.0f,
+    -10.0f, 10.0f, -10.0f,
+    -10.0f, 10.0f, -10.0f,
+    -10.0f, 10.0f, 10.0f,
+    -10.0f, -10.0f, 10.0f,
+
+    10.0f, -10.0f, -10.0f,
+    10.0f, -10.0f, 10.0f,
+    10.0f, 10.0f, 10.0f,
+    10.0f, 10.0f, 10.0f,
+    10.0f, 10.0f, -10.0f,
+    10.0f, -10.0f, -10.0f,
+
+    -10.0f, -10.0f, 10.0f,
+    -10.0f, 10.0f, 10.0f,
+    10.0f, 10.0f, 10.0f,
+    10.0f, 10.0f, 10.0f,
+    10.0f, -10.0f, 10.0f,
+    -10.0f, -10.0f, 10.0f,
+
+    -10.0f, 10.0f, -10.0f,
+    10.0f, 10.0f, -10.0f,
+    10.0f, 10.0f, 10.0f,
+    10.0f, 10.0f, 10.0f,
+    -10.0f, 10.0f, 10.0f,
+    -10.0f, 10.0f, -10.0f,
+
+    -10.0f, -10.0f, -10.0f,
+    -10.0f, -10.0f, 10.0f,
+    10.0f, -10.0f, -10.0f,
+    10.0f, -10.0f, -10.0f,
+    -10.0f, -10.0f, 10.0f,
+    10.0f, -10.0f, 10.0f
+};
 
 
 scene_t::scene_t()
@@ -48,7 +94,12 @@ scene_t::scene_t()
     gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
     program_ = create_program(vs_, fs_, gs_);
 
+    cube_vs_ = create_shader(GL_VERTEX_SHADER, "shaders//cubemap.vp");
+    cube_fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//cubemap.fp");
+    cube_program_ = create_program(cube_vs_, cube_fs_);
+
     geometry_.init_tables(program_);
+    load_cubemap_texture();
     init_buffer();
     init_vertex_array();
 }
@@ -113,9 +164,13 @@ void scene_t::init_metaballs() {
         add_metaball();
     }
 }
-
 void scene_t::init_buffer() {
     glGenBuffers(1, &vx_buf_);
+
+    glGenBuffers(1, &cube_vx_buf_);
+    glBindBuffer(GL_ARRAY_BUFFER, cube_vx_buf_);
+        glBufferData(GL_ARRAY_BUFFER, 3 * 36 * sizeof(float), &cube_points, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void scene_t::init_vertex_array() {
@@ -126,6 +181,14 @@ void scene_t::init_vertex_array() {
     glVertexAttribPointer(pos_location, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
     glEnableVertexAttribArray(pos_location);
 
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &cube_vao_);
+    glBindVertexArray(cube_vao_);
+    glBindBuffer(GL_ARRAY_BUFFER, cube_vx_buf_);
+    GLuint const cube_pos_loc = glGetAttribLocation(cube_program_, "in_pos");
+    glVertexAttribPointer(cube_pos_loc, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+    glEnableVertexAttribArray(cube_pos_loc);
     glBindVertexArray(0);
 };
 
@@ -191,7 +254,9 @@ void scene_t::draw_frame(float time_from_start) {
     geometry_.update_uniforms(program_);
     set_lights();
 
-    draw_metaballs(time_from_start, draw_mode_ == WIREFRAME, true);
+    draw_cubemap();
+
+    draw_metaballs(time_from_start, draw_mode_ == WIREFRAME, false);
 
     if (draw_mode_ == WIREFRAME_OVER_SOLID) {
         draw_metaballs(time_from_start, true, false);
@@ -199,6 +264,8 @@ void scene_t::draw_frame(float time_from_start) {
 }
 
 void scene_t::set_lights() {
+    glUseProgram(program_);
+
     GLuint light_pos_loc = glGetUniformLocation(program_, "light.pos");
     GLuint light_ambient_loc = glGetUniformLocation(program_, "light.ambient");
     GLuint light_diffuse_loc = glGetUniformLocation(program_, "light.diffuse");
@@ -267,4 +334,97 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     if (wired) {
         glDisable(GL_POLYGON_OFFSET_LINE);
     }
+}
+
+void scene_t::draw_cubemap() {
+    //quat rotation = quat(vec3(0, 0, 0));
+    float const w = (float)glutGet(GLUT_WINDOW_WIDTH);
+    float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
+
+    mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
+    mat4 const view = lookAt(vec3(0, 0, 1), vec3(0, 0, 0), vec3(0, -1, 0));
+    mat4 const rotation = mat4_cast(quat(0.9, 0.17, 0.4, 0.06));
+    mat4 mvp = proj  * view * rotation;
+
+    glClearColor(0.2f, 0.2f, 0.2f, 1);
+    glClearDepth(1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDepthMask(GL_FALSE);
+
+    glUseProgram(cube_program_);
+
+    GLuint const mvp_location = glGetUniformLocation(cube_program_, "mvp");
+    glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &mvp[0][0]);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_cube_);
+    GLuint const tex_loc = glGetUniformLocation(cube_program_, "cube_texture");
+    glUniform1i(tex_loc, 1);
+
+    glBindVertexArray(cube_vao_);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    glDepthMask(GL_TRUE);
+}
+
+void scene_t::load_cubemap_texture() {
+    glActiveTexture(GL_TEXTURE1);
+    glGenTextures(1, &tex_cube_);
+
+    bool ok = true;
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, cube_tex_path + "negx.jpg");
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_POSITIVE_X, cube_tex_path + "posx.jpg");
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, cube_tex_path + "negy.jpg");
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, cube_tex_path + "posy.jpg");
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, cube_tex_path + "negz.jpg");
+    ok = ok && load_cube_side(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, cube_tex_path + "posz.jpg");
+
+    if (!ok) {
+        std::cerr << "Failed to load cubemap texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_cube_);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+bool scene_t::load_cube_side(GLenum side_target, std::string const & file_name) {
+    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+    FIBITMAP *dib = 0;
+
+    fif = FreeImage_GetFileType(file_name.c_str(), 0);
+    if (fif == FIF_UNKNOWN) {
+        fif = FreeImage_GetFIFFromFilename(file_name.c_str());
+    }
+
+    if (FreeImage_FIFSupportsReading(fif)) {
+        dib = FreeImage_Load(fif, file_name.c_str());
+    }
+
+    if (!dib) {
+        return false;
+    }
+
+    BYTE* bits = 0;
+    unsigned int width = 0, height = 0;
+
+    bits = FreeImage_GetBits(dib);
+    width = FreeImage_GetWidth(dib);
+    height = FreeImage_GetHeight(dib);
+
+    if ((bits == 0) || (width == 0) || (height == 0)) {
+        return false;
+    }
+
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_cube_);
+    glTexImage2D(side_target, 0, GL_RGB8, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, bits);
+
+    FreeImage_Unload(dib);
+    return true;
 }

@@ -1,0 +1,11 @@
+#version 330
+
+in vec3 in_pos;
+out vec3 tex_pos;
+
+uniform mat4 mvp;
+
+void main() {
+	tex_pos = in_pos;	
+	gl_Position = mvp * vec4(in_pos , 1);
+}

@@ -42,7 +42,9 @@ GLuint create_program( GLuint vs, GLuint fs, GLuint gs)
 {
    GLuint const program = glCreateProgram();
    glAttachShader(program, vs);
-   glAttachShader(program, gs);
+   if (gs != 0) {
+       glAttachShader(program, gs);
+   }
    glAttachShader(program, fs);
    glLinkProgram(program);
 
