@@ -8,13 +8,10 @@ uniform struct light_t {
 	float diffuse;
 	float specular;
 	float shininess;
-
-	vec3 ambient_color;
-	vec3 diffuse_color;
 } light;
 
 uniform samplerCube cube_texture;
-uniform mat4 view;
+uniform mat4 inv_view;
 
 in vec3 norm;
 in vec3 position;
@@ -24,7 +21,7 @@ out vec3 o_color;
 
 vec3 getReflect(vec3 viewDir, vec3 n) {
 	vec3 reflected = reflect(-viewDir, n);
-	reflected = vec3(inverse(view) * vec4(reflected, 0));
+	reflected = vec3(inv_view * vec4(reflected, 0));
 
 	return texture(cube_texture, reflected).rgb;
 }
@@ -33,7 +30,7 @@ vec3 getRefract(vec3 viewDir, vec3 n) {
 	const float ratio = 1 / refract_idx;
 
 	vec3 refracted = refract(-viewDir, n, ratio);
-	refracted = vec3(inverse(view) * vec4(refracted, 0));
+	refracted = vec3(inv_view * vec4(refracted, 0));
 
 	return texture(cube_texture, refracted).rgb;
 }
@@ -75,7 +72,6 @@ void main()
         o_color = vec3(1, 0, 0);
     }
     else {
-        //o_color = getSurfaceColor(normalize(-position), normalize(norm));
 		o_color = getBlinnPhong();
     }
 }

@@ -79,12 +79,10 @@ scene_t::scene_t()
     metaball_freq_ = { 4, 5, 6 };
 
     lighting_.pos = vec3(5, 0, 0);
-    lighting_.ambient = 0.3f;
+    lighting_.ambient = 0.5f;
     lighting_.diffuse = 0.8f;
     lighting_.specular = 0.2f;
     lighting_.shininess = 50;
-    ambient_color_ = vec3(0, 1, 0);
-    diffuse_color_ = vec3(0, 0.5, 0);
 
     init_controls();
     init_metaballs();
@@ -256,12 +254,19 @@ void scene_t::draw_frame(float time_from_start) {
     geometry_.update_uniforms(metaball_program_);
     set_lights();
 
-    draw_cubemap();
+    float const w = (float)glutGet(GLUT_WINDOW_WIDTH);
+    float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
+    mat4 proj = perspective(45.0f, w / h, 0.1f, 100.0f);
+    mat4 world_rotation = mat4_cast(quat(-0.27, 0, -0.96, 0));
+    mat4 view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, -1, 0));
+    view = view * world_rotation;
 
-    draw_metaballs(time_from_start, draw_mode_ == WIREFRAME, false);
+    draw_cubemap(view, proj);
+
+    draw_metaballs(view, proj, draw_mode_ == WIREFRAME);
 
     if (draw_mode_ == WIREFRAME_OVER_SOLID) {
-        draw_metaballs(time_from_start, true, false);
+        draw_metaballs(view, proj, true);
     }
 }
 
@@ -273,8 +278,6 @@ void scene_t::set_lights() {
     GLuint light_diffuse_loc = glGetUniformLocation(metaball_program_, "light.diffuse");
     GLuint light_specular_loc = glGetUniformLocation(metaball_program_, "light.specular");
     GLuint light_shininess_loc = glGetUniformLocation(metaball_program_, "light.shininess");
-    GLuint light_ambient_color_loc = glGetUniformLocation(metaball_program_, "light.ambient_color");
-    GLuint light_diffuse_color_loc = glGetUniformLocation(metaball_program_, "light.diffuse_color");
 
     vec3 light_pos = -lighting_.pos;
     glUniform3fv(light_pos_loc, 1, &light_pos[0]);
@@ -282,18 +285,10 @@ void scene_t::set_lights() {
     glUniform1f(light_diffuse_loc, lighting_.diffuse);
     glUniform1f(light_specular_loc, lighting_.specular);
     glUniform1f(light_shininess_loc, lighting_.shininess);
-
-    glUniform3fv(light_ambient_color_loc, 1, &ambient_color_[0]);
-    glUniform3fv(light_diffuse_color_loc, 1, &diffuse_color_[0]);
 }
 
-void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
-    float const w = (float)glutGet(GLUT_WINDOW_WIDTH);
-    float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
-
-    mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
+void scene_t::draw_metaballs(mat4 const & view, mat4 const & proj, bool wired) {
     mat4 const rotation = mat4_cast(rotation_by_control_);
-    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, -1, 0));
     mat4 const model = rotation;
     mat4 const mv = view * model;
     mat4 const mvp = proj * view * model;
@@ -307,26 +302,17 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    if (clear) {
-        glClearColor(0.2f, 0.2f, 0.2f, 1);
-        glClearDepth(1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-
-
     glUseProgram(metaball_program_);
 
     GLuint const mvp_location = glGetUniformLocation(metaball_program_, "mvp");
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, &mvp[0][0]);
 
-    GLuint const model_loc = glGetUniformLocation(metaball_program_, "model");
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, &model[0][0]);
-
     GLuint const mv_loc = glGetUniformLocation(metaball_program_, "mv");
     glUniformMatrix4fv(mv_loc, 1, GL_FALSE, &mv[0][0]);
 
-    GLuint const view_loc = glGetUniformLocation(metaball_program_, "view");
-    glUniformMatrix4fv(view_loc, 1, GL_FALSE, &view[0][0]);
+    mat4 inv_view = glm::inverse(view);
+    GLuint const view_loc = glGetUniformLocation(metaball_program_, "inv_view");
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, &inv_view[0][0]);
 
     GLuint const is_wireframe_location = glGetUniformLocation(metaball_program_, "is_wireframe");
     glUniform1ui(is_wireframe_location, wired);
@@ -345,14 +331,7 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     }
 }
 
-void scene_t::draw_cubemap() {
-    //quat rotation = quat(vec3(0, 0, 0));
-    float const w = (float)glutGet(GLUT_WINDOW_WIDTH);
-    float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
-
-    mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
-    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, -1, 0));
-    mat4 const rotation = mat4_cast(quat(0.9, 0.17, 0.4, 0.06));
+void scene_t::draw_cubemap(mat4 const & view, mat4 const & proj) {
     mat4 mvp = proj * view;
 
     glClearColor(0.2f, 0.2f, 0.2f, 1);

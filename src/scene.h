@@ -31,13 +31,13 @@ public:
 
     void animate(float time_from_start);
     void draw_frame(float time_from_start);
-    void draw_metaballs(float time_from_start, bool wired, bool clear);
+    void draw_metaballs(mat4 const & view, mat4 const & proj, bool wired);
 
     void set_lights();
 
     void load_cubemap_texture();
     bool load_cube_side(GLenum side_target, std::string const & file_name);
-    void draw_cubemap();
+    void draw_cubemap(mat4 const & view, mat4 const & proj);
 private:
     GLuint metaball_vx_buf_, metaball_vao_;
     GLuint metaball_vs_, metaball_gs_, metaball_fs_, metaball_program_;
@@ -55,8 +55,6 @@ private:
     std::vector<float> metaball_freq_;
 
     lighting_t lighting_;
-    vec3 ambient_color_;
-    vec3 diffuse_color_;
 
     std::default_random_engine generator_;
     TwBar* bar_;

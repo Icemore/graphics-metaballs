@@ -15,7 +15,6 @@ uniform int metaballCnt;
 uniform float isoLevel;
 uniform vec3 vertDecal[8];
 uniform mat4 mvp;
-uniform mat4 model;
 uniform mat4 mv;
 
 uniform ivec2 edgeToVertex[12] = {
@@ -108,12 +107,8 @@ void main() {
         for (int j = 0; j < 3; ++j) {
             vec3 pos = intersects[triTableAt(cubeIndex, i + j)];
 
-			vec4 norm4 = mv * vec4(getNormal(pos), 0);
-			//norm = norm4.xyz / norm4.w;
-			norm = vec3(norm4);
-			vec4 position4 = mv * vec4(pos, 1);
-			//position = position4.xyz / position4.w;
-			position = vec3(position4);
+			norm = vec3(mv * vec4(getNormal(pos), 0));
+			position = vec3(mv * vec4(pos, 1));
 			gl_Position = mvp * vec4(pos, 1);
             EmitVertex();
         }
