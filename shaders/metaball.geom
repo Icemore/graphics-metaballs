@@ -108,10 +108,12 @@ void main() {
         for (int j = 0; j < 3; ++j) {
             vec3 pos = intersects[triTableAt(cubeIndex, i + j)];
 
-			vec4 norm4 = model * vec4(getNormal(pos), 1);
-			norm = norm4.xyz / norm4.w;
+			vec4 norm4 = mv * vec4(getNormal(pos), 0);
+			//norm = norm4.xyz / norm4.w;
+			norm = vec3(norm4);
 			vec4 position4 = mv * vec4(pos, 1);
-			position = position4.xyz / position4.w;
+			//position = position4.xyz / position4.w;
+			position = vec3(position4);
 			gl_Position = mvp * vec4(pos, 1);
             EmitVertex();
         }

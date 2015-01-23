@@ -293,7 +293,7 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
 
     mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
     mat4 const rotation = mat4_cast(rotation_by_control_);
-    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, 1, 0));
+    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, -1, 0));
     mat4 const model = rotation;
     mat4 const mv = view * model;
     mat4 const mvp = proj * view * model;
@@ -325,11 +325,18 @@ void scene_t::draw_metaballs(float time_from_start, bool wired, bool clear) {
     GLuint const mv_loc = glGetUniformLocation(metaball_program_, "mv");
     glUniformMatrix4fv(mv_loc, 1, GL_FALSE, &mv[0][0]);
 
+    GLuint const view_loc = glGetUniformLocation(metaball_program_, "view");
+    glUniformMatrix4fv(view_loc, 1, GL_FALSE, &view[0][0]);
+
     GLuint const is_wireframe_location = glGetUniformLocation(metaball_program_, "is_wireframe");
     glUniform1ui(is_wireframe_location, wired);
 
-    glBindVertexArray(metaball_vao_);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex_cube_);
+    GLuint const tex_loc = glGetUniformLocation(metaball_program_, "cube_texture");
+    glUniform1i(tex_loc, 1);
 
+    glBindVertexArray(metaball_vao_);
 
     glDrawArrays(GL_POINTS, 0, geometry_.grid().size());
 
@@ -344,9 +351,9 @@ void scene_t::draw_cubemap() {
     float const h = (float)glutGet(GLUT_WINDOW_HEIGHT);
 
     mat4 const proj = perspective(45.0f, w / h, 0.1f, 100.0f);
-    mat4 const view = lookAt(vec3(0, 0, 1), vec3(0, 0, 0), vec3(0, -1, 0));
+    mat4 const view = lookAt(vec3(0, 0, 4), vec3(0, 0, 0), vec3(0, -1, 0));
     mat4 const rotation = mat4_cast(quat(0.9, 0.17, 0.4, 0.06));
-    mat4 mvp = proj  * view * rotation;
+    mat4 mvp = proj * view;
 
     glClearColor(0.2f, 0.2f, 0.2f, 1);
     glClearDepth(1);
