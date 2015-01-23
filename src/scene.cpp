@@ -43,7 +43,7 @@ scene_t::scene_t()
     init_controls();
     init_metaballs();
 
-    vs_ = create_shader(GL_VERTEX_SHADER, "shaders//dummy.vp");
+    vs_ = create_shader(GL_VERTEX_SHADER, "shaders//metaball.vp");
     fs_ = create_shader(GL_FRAGMENT_SHADER, "shaders//metaball.fp");
     gs_ = create_shader(GL_GEOMETRY_SHADER, "shaders//metaball.geom");
     program_ = create_program(vs_, fs_, gs_);
