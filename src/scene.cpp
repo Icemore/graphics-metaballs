@@ -72,15 +72,14 @@ static const float cube_points[] = {
 
 
 scene_t::scene_t()
-        : geometry_(4.2f, 30, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
+        : geometry_(5.6f, 30, vec3(-1, -1, -1), vec3(1, 1, 1), metaballs_),
           draw_mode_(draw_mode_t::SOLID),
-          metaball_speed_(0.1f),
+          metaball_speed_(0.15f),
           metaball_amplitude_(0.5f) {
-    metaball_freq_ = { 4, 5, 6 };
 
-    lighting_.pos = vec3(5, 0, 0);
-    lighting_.ambient = 0.5f;
-    lighting_.diffuse = 0.8f;
+    lighting_.pos = vec3(3, 0, -4);
+    lighting_.ambient = 0.6f;
+    lighting_.diffuse = 0.7f;
     lighting_.specular = 0.2f;
     lighting_.shininess = 50;
 

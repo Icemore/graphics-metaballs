@@ -52,7 +52,6 @@ private:
 
     float metaball_speed_;
     float metaball_amplitude_;
-    std::vector<float> metaball_freq_;
 
     lighting_t lighting_;
 
