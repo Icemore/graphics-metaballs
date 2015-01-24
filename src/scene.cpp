@@ -340,6 +340,7 @@ void scene_t::draw_cubemap(mat4 const & view, mat4 const & proj) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glDepthMask(GL_FALSE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     glUseProgram(cube_program_);
 

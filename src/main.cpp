@@ -104,6 +104,9 @@ int main( int argc, char ** argv )
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
 #ifdef USE_CORE_OPENGL
     glutDestroyWindow(window_handle);
     glutInitContextProfile(GLUT_CORE_PROFILE);
